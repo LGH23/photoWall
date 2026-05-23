@@ -251,8 +251,8 @@
     </div>
 
     <!-- 隐藏的背景音乐播放器 -->
-    <!-- 优化：移除 preload="auto"，改为 metadata 减少初始加载阻塞 -->
-    <audio id="bgMusic" loop preload="metadata">
+    <!-- 优化：使用 preload="none" 延迟加载，用户交互后才加载音乐 -->
+    <audio id="bgMusic" loop preload="none">
         <source src="a-little-love.mp3" type="audio/mpeg">
     </audio>
 
@@ -1279,10 +1279,32 @@
             initLightbox();
 
             const bgMusic = document.getElementById('bgMusic');
-            bgMusic.volume = 0.15; 
+            bgMusic.volume = 0.15;
+
+            let musicLoaded = false;
+            let musicLoading = false;
+
+            const loadAndPlayMusic = () => {
+                if (musicLoading) return;
+                if (!musicLoaded) {
+                    musicLoading = true;
+                    bgMusic.load();
+                    bgMusic.addEventListener('canplaythrough', () => {
+                        musicLoaded = true;
+                        musicLoading = false;
+                        bgMusic.play().catch(() => {});
+                    }, { once: true });
+                    bgMusic.addEventListener('error', () => {
+                        musicLoading = false;
+                    }, { once: true });
+                } else {
+                    if (bgMusic.paused) {
+                        bgMusic.play().catch(() => {});
+                    }
+                }
+            };
 
             const playMusic = () => {
-                // 只有当音乐处于暂停状态时才尝试播放，避免重复调用 play()
                 if (bgMusic.paused) {
                     const playPromise = bgMusic.play();
                     if (playPromise !== undefined) {
@@ -1295,16 +1317,8 @@
                 }
             };
 
-            // 使用 requestIdleCallback 确保在主线程空闲时触发音频，避免阻塞 UI 渲染
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => playMusic());
-            } else {
-                setTimeout(playMusic, 500);
-            }
-
-            // 监听多个交互事件，只要触发一个就播放，并使用 capture 阶段尽早捕获
             const initPlayOnInteract = () => {
-                playMusic();
+                loadAndPlayMusic();
                 ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => {
                     document.removeEventListener(evt, initPlayOnInteract, true);
                 });
