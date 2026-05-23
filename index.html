@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时光照片墙 - 珍藏每一份回忆</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preload" href="../media/photo1.jpg" as="image">
+    <link rel="preload" href="../media/photo2.jpg" as="image">
+    <link rel="preload" href="../media/photo3.jpg" as="image">
+    <link rel="preload" href="a-little-love.mp3" as="audio">
+</head>
+<body>
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-content">
+            <div class="loader-heart">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <p class="loader-text">正在加载美好回忆...</p>
+            <div class="loader-progress">
+                <div class="loader-progress-bar" id="loaderProgressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="back-to-top" id="backToTop" title="返回顶部">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 15l-6-6-6 6"/>
+        </svg>
+    </button>
+
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+        <button class="lightbox-close" id="lightboxClose">×</button>
+        <button class="lightbox-prev" id="lightboxPrev">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+        </button>
+        <button class="lightbox-next" id="lightboxNext">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </button>
+        <div class="lightbox-content">
+            <img class="lightbox-image" id="lightboxImage" src="" alt="">
+            <video class="lightbox-video" id="lightboxVideo" controls style="display: none;"></video>
+        </div>
+        <div class="lightbox-info" id="lightboxInfo">
+            <div class="lightbox-date"></div>
+            <div class="lightbox-location"></div>
+            <div class="lightbox-feeling"></div>
+        </div>
+        <div class="lightbox-counter" id="lightboxCounter">1 / 68</div>
+    </div>
+
+    <!-- 1. 底层视差风景图 -->
+    <div class="bg-parallax"></div>
+    <!-- 2. 半透明暖色遮罩 -->
+    <div class="bg-mask"></div>
+    <!-- 3. 摇曳的光影氛围 -->
+    <div class="ambient-light"></div>
+    
+    <canvas id="snowCanvas"></canvas>
+
+    <!-- 4. 前景景深虚化光斑 -->
+    <div class="bokeh-container">
+        <div class="bokeh bokeh-1"></div>
+        <div class="bokeh bokeh-2"></div>
+        <div class="bokeh bokeh-3"></div>
+        <div class="bokeh bokeh-4"></div>
+    </div>
+    
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-icon"></div>
+            <h2 class="login-title">时光照片墙</h2>
+            <p class="login-subtitle">请输入访问密码</p>
+            <form class="login-form" id="loginForm">
+                <div class="input-group">
+                    <input 
+                        type="password" 
+                        class="login-input" 
+                        id="passwordInput" 
+                        placeholder="请输入密码"
+                        autocomplete="off"
+                    >
+                </div>
+                <p class="login-error" id="loginError">密码错误，请重试</p>
+                <button type="submit" class="login-btn">进入回忆</button>
+            </form>
+            <p class="login-hint">这是一个私密的照片墙，需要密码才能访问</p>
+        </div>
+    </div>
+
+    <button class="logout-btn" id="logoutBtn" style="display: none;">退出登录</button>
+    
+    <aside class="sidebar-verse left" id="sidebarLeft">
+        <div class="verse-decoration">
+            <span class="verse-dot"></span>
+            <span class="verse-line"></span>
+        </div>
+        <p class="verse-text" id="verseLeft"></p>
+        <div class="verse-seal" id="sealLeft"></div>
+    </aside>
+    
+    <aside class="sidebar-verse right" id="sidebarRight">
+        <p class="verse-text" id="verseRight"></p>
+        <div class="verse-seal" id="sealRight"></div>
+        <div class="verse-decoration">
+            <span class="verse-line"></span>
+            <span class="verse-dot"></span>
+        </div>
+    </aside>
+    
+    <div class="container">
+        <section class="hero-section">
+            <h1 class="hero-title">时光·逐梦</h1>
+            <p class="hero-subtitle">每一张照片，都是向梦想迈进的足迹</p>
+            <div class="hero-decoration">
+                <span class="hero-dot"></span>
+                <span class="hero-dot"></span>
+                <span class="hero-dot"></span>
+            </div>
+        </section>
+
+        <header>
+            <div class="title-wrapper">
+                <div class="title-decoration"></div>
+                <h1>时光照片墙</h1>
+            </div>
+            <p class="subtitle">珍藏每一份美好回忆</p>
+            <div class="divider">
+                <div class="divider-line"></div>
+                <div class="divider-icon"></div>
+                <div class="divider-line"></div>
+            </div>
+        </header>
+
+        <main>
+            <div class="photo-wall" id="photoWall">
+            </div>
+            
+            <div class="mobile-verse" id="mobileVerse">
+                <p class="mobile-verse-text" id="mobileVerseLeft"></p>
+                <div class="mobile-verse-divider"></div>
+                <p class="mobile-verse-text" id="mobileVerseRight"></p>
+            </div>
+        </main>
+
+        <footer>
+            <div class="footer-decoration">
+                <div class="footer-line"></div>
+                <div class="footer-heart"></div>
+                <div class="footer-line"></div>
+            </div>
+            <p>愿所有美好，都被珍藏</p>
+        </footer>
+    </div>
+
+    <section class="love-envelope-section" id="loveEnvelopeSection">
+        <div class="envelope-particles" id="envelopeParticles"></div>
+        <div class="envelope-glow"></div>
+        <div class="envelope-container">
+            <div class="envelope-header">
+                <div class="envelope-seal">
+                    <span class="seal-icon">❤</span>
+                </div>
+                <h2 class="envelope-title">致最特别的你</h2>
+                <p class="envelope-subtitle">滑动解锁专属情书</p>
+            </div>
+            
+            <div class="slider-container" id="sliderContainer">
+                <div class="slider-track">
+                    <div class="slider-progress" id="sliderProgress"></div>
+                    <div class="slider-lock" id="sliderLock">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <div class="slider-unlock" id="sliderUnlock">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="slider-thumb" id="sliderThumb">
+                    <div class="thumb-glow"></div>
+                    <div class="thumb-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <p class="slider-hint">→ 滑动开启情书 ←</p>
+        </div>
+    </section>
+
+    <div class="love-letter-modal" id="loveLetterModal">
+        <div class="letter-backdrop" id="letterBackdrop"></div>
+        <div class="letter-container" id="letterContainer">
+            <button class="letter-close" id="letterClose">×</button>
+            <div class="letter-scroll">
+                <div class="letter-header">
+                    <div class="letter-ribbon"></div>
+                    <h3 class="letter-title">写给婷婷的一封信</h3>
+                </div>
+                <div class="letter-content">
+                    <div class="letter-decoration-top"></div>
+                    <p class="letter-greeting">致婷婷：</p>
+                    <div class="letter-text">
+                        <p>2001年6月13日，这个世界迎来了一颗闪闪发光的星星。</p>
+                        <p>你总是用热闹包裹孤独，用嘴硬藏起心软，用洒脱掩饰深情。你像风一样自由，却把自己困在敏感与不安的牢笼里。可你知道吗？正是这样的你，才如此独一无二，如此值得被爱。</p>
+                        <p>你说你喜欢赵露思，因为她甜美又坚强；你喜欢Angelababy，因为她美丽又独立。其实，你比她们更值得被看见——你骨子里的善良，你藏在玩笑里的真心，你深夜独自消化的一切委屈，都是你闪闪发光的模样。</p>
+                        <p>未来的日子，愿你早日成为自己的大女主。不用再假装坚强，不用再小心翼翼，不用再等谁来读懂你的口是心非。你可以自己给自己安全感，自己给自己偏爱，自己成为自己最坚实的依靠。</p>
+                        <p>愿你往后余生，万事顺遂，一切安好。愿你遇见的所有人，都配得上你的真心；愿你走过的所有路，都开满鲜花。愿你永远被温柔以待，永远有人看穿你的逞强，给你一个不需要理由的拥抱。</p>
+                        <p>你值得世间所有的美好。</p>
+                        <p class="letter-heart">❤</p>
+                    </div>
+                    <div class="letter-signature">
+                        <p>生日快乐</p>
+                        <p class="letter-date">—— 永远记得你的人</p>
+                    </div>
+                    <div class="letter-decoration-bottom"></div>
+                </div>
+                <div class="letter-wax-seal">
+                    <span>❤</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dream-whisper" id="dreamWhisper">
+        <div class="whisper-content" id="whisperContent">
+            <p class="whisper-text" id="whisperText"></p>
+            <p class="whisper-author" id="whisperAuthor"></p>
+        </div>
+        <div class="whisper-trigger" id="whisperTrigger">
+            <div class="whisper-pulse"></div>
+            <div class="whisper-icon"></div>
+        </div>
+    </div>
+
+    <!-- 隐藏的背景音乐播放器 -->
+    <!-- 优化：移除 preload="auto"，改为 metadata 减少初始加载阻塞 -->
+    <audio id="bgMusic" loop preload="metadata">
+        <source src="a-little-love.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="lyrics-marquee" id="lyricsMarquee">
+        <div class="lyrics-track" id="lyricsTrack">
+            <span class="lyrics-text" id="lyricsText">Greatness as you, Smallest as me...</span>
+        </div>
+    </div>
+
+    <script>
+        const ACCESS_PASSWORD = "ppt010613";
+
+        const AUTH_SESSION_KEY = "photo_wall_authenticated";
+
+        const sidebarConfig = {
+            leftVerse: "岁月不语，唯石能言",
+            rightVerse: "心之所向，素履以往",
+            leftSeal: "忆",
+            rightSeal: "梦"
+        };
+
+        const quotesData = [
+            {
+                text: "保持热爱，奔赴山海",
+                author: "生活箴言"
+            },
+            {
+                text: "愿你眼里有光，心中有梦",
+                author: "美好祝愿"
+            },
+            {
+                text: "星光不问赶路人，时光不负有心人",
+                author: "励志语录"
+            },
+            {
+                text: "每一个不曾起舞的日子，都是对生命的辜负",
+                author: "尼采"
+            },
+            {
+                text: "生活明朗，万物可爱",
+                author: "人间值得"
+            },
+            {
+                text: "愿你历尽千帆，归来仍是少年",
+                author: "青春寄语"
+            },
+            {
+                text: "心之所向，素履以往",
+                author: "人生感悟"
+            },
+            {
+                text: "凡是过往，皆为序章",
+                author: "莎士比亚"
+            },
+            {
+                text: "岁月不居，时节如流",
+                author: "时光感悟"
+            },
+            {
+                text: "山高水长，来日方长",
+                author: "人生期许"
+            },
+            {
+                text: "温柔半两，从容一生",
+                author: "生活态度"
+            },
+            {
+                text: "人间忽晚，山河已秋",
+                author: "季节感怀"
+            },
+            {
+                text: "往事清零，爱恨随意",
+                author: "放下释然"
+            },
+            {
+                text: "且将新火试新茶，诗酒趁年华",
+                author: "苏轼"
+            },
+            {
+                text: "时光清浅，许你安然",
+                author: "岁月静好"
+            },
+            {
+                text: "山河远阔，人间烟火",
+                author: "人间风景"
+            },
+            {
+                text: "且听风吟，静待花开",
+                author: "静心等待"
+            },
+            {
+                text: "心若向阳，无畏悲伤",
+                author: "积极人生"
+            },
+            {
+                text: "春风有信，花开有期",
+                author: "自然规律"
+            },
+            {
+                text: "所念皆星河",
+                author: "浪漫情怀"
+            },
+            {
+                text: "愿你被世界温柔以待",
+                author: "美好祝福"
+            },
+            {
+                text: "时光知味，岁月沉香",
+                author: "岁月沉淀"
+            },
+            {
+                text: "愿有岁月可回首，且以深情共白头",
+                author: "爱情誓言"
+            },
+            {
+                text: "时光不老，我们不散",
+                author: "友情长存"
+            },
+            {
+                text: "愿你眼里有星辰，心中有山海",
+                author: "美好期许"
+            },
+            {
+                text: "从此以梦为马，不负韶华",
+                author: "追梦路上"
+            },
+            {
+                text: "愿时光能缓，故人不散",
+                author: "珍惜当下"
+            }
+        ];
+
+        const whisperQuotes = [
+            {
+                text: "梦想不会逃跑，逃跑的永远是自己",
+                author: "今日寄语"
+            },
+            {
+                text: "你现在的努力，是未来的铺垫",
+                author: "成长感悟"
+            },
+            {
+                text: "每一个优秀的人，都有一段沉默的时光",
+                author: "沉淀的力量"
+            },
+            {
+                text: "不要让未来的你，讨厌现在的自己",
+                author: "自我提醒"
+            },
+            {
+                text: "坚持，是生命的一种毅力",
+                author: "人生哲理"
+            }
+        ];
+
+        function checkAuth() {
+            return sessionStorage.getItem(AUTH_SESSION_KEY) === "true";
+        }
+
+        function setAuth() {
+            sessionStorage.setItem(AUTH_SESSION_KEY, "true");
+        }
+
+        function clearAuth() {
+            sessionStorage.removeItem(AUTH_SESSION_KEY);
+        }
+
+        function showLogin() {
+            const loginOverlay = document.getElementById('loginOverlay');
+            const logoutBtn = document.getElementById('logoutBtn');
+            loginOverlay.classList.remove('hidden');
+            logoutBtn.style.display = 'none';
+        }
+
+        function hideLogin() {
+            const loginOverlay = document.getElementById('loginOverlay');
+            const logoutBtn = document.getElementById('logoutBtn');
+            loginOverlay.classList.add('hidden');
+            logoutBtn.style.display = 'block';
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const passwordInput = document.getElementById('passwordInput');
+            const loginError = document.getElementById('loginError');
+            
+            if (passwordInput.value === ACCESS_PASSWORD) {
+                setAuth();
+                hideLogin();
+                initSidebar();
+                renderPhotoWall();
+                passwordInput.value = '';
+            } else {
+                loginError.classList.add('show');
+                passwordInput.classList.add('shake');
+                setTimeout(() => {
+                    passwordInput.classList.remove('shake');
+                }, 500);
+                setTimeout(() => {
+                    loginError.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        function handleLogout() {
+            clearAuth();
+            showLogin();
+            const photoWall = document.getElementById('photoWall');
+            photoWall.innerHTML = '';
+        }
+
+        function initSidebar() {
+            document.getElementById('verseLeft').textContent = sidebarConfig.leftVerse;
+            document.getElementById('verseRight').textContent = sidebarConfig.rightVerse;
+            document.getElementById('sealLeft').textContent = sidebarConfig.leftSeal;
+            document.getElementById('sealRight').textContent = sidebarConfig.rightSeal;
+            document.getElementById('mobileVerseLeft').textContent = sidebarConfig.leftVerse;
+            document.getElementById('mobileVerseRight').textContent = sidebarConfig.rightVerse;
+        }
+
+        const photoData = [
+            {
+                imgSrc: "../media/photo1.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "时光荏苒，初心不忘"
+            },
+            {
+                imgSrc: "../media/photo2.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "阳光正好，微风不燥",
+                isLongImage: true
+            },
+            {
+                imgSrc: "../media/photo3.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "岁月静好，现世安稳"
+            },
+            {
+                imgSrc: "../media/photo4.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "心之所向，素履以往"
+            },
+            {
+                imgSrc: "../media/photo5.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "星光不问赶路人"
+            },
+            {
+                imgSrc: "../media/photo6.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿历尽千帆，归来仍是少年"
+            },
+            {
+                type: "video",
+                src: "../media/video1.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo7.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "生活明朗，万物可爱"
+            },
+            {
+                imgSrc: "../media/photo8.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "凡是过往，皆为序章"
+            },
+            {
+                imgSrc: "../media/photo9.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "热爱可抵岁月漫长"
+            },
+            {
+                imgSrc: "../media/photo10.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "保持热爱，奔赴山海"
+            },
+            {
+                imgSrc: "../media/photo11.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "每一个不曾起舞的日子"
+            },
+            {
+                imgSrc: "../media/photo12.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "都是对生命的辜负"
+            },
+            {
+                type: "video",
+                src: "../media/video2.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo13.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "烟火人间，风味长存"
+            },
+            {
+                imgSrc: "../media/photo14.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "山水一程，三生有幸"
+            },
+            {
+                imgSrc: "../media/photo15.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿你眼里有光"
+            },
+            {
+                imgSrc: "../media/photo16.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "心中有梦"
+            },
+            {
+                imgSrc: "../media/photo17.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "不负韶华，不负自己"
+            },
+            {
+                imgSrc: "../media/photo18.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "岁月悠长，山河无恙"
+            },
+            {
+                type: "video",
+                src: "../media/video3.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo19.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "遇见美好，遇见你"
+            },
+            {
+                imgSrc: "../media/photo20.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "春风十里不如你"
+            },
+            {
+                imgSrc: "../media/photo21.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿你三冬暖"
+            },
+            {
+                imgSrc: "../media/photo22.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿你春不寒"
+            },
+            {
+                imgSrc: "../media/photo23.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "花开如梦，风过无痕"
+            },
+            {
+                imgSrc: "../media/photo24.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "静守时光，以待流年"
+            },
+            {
+                type: "video",
+                src: "../media/video4.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo25.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "浮生若梦，为欢几何"
+            },
+            {
+                imgSrc: "../media/photo26.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "温柔半两，从容一生"
+            },
+            {
+                imgSrc: "../media/photo27.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "人间忽晚，山河已秋"
+            },
+            {
+                type: "video",
+                src: "../media/video8.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo29.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "往事清零，爱恨随意"
+            },
+            {
+                imgSrc: "../media/photo30.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "且将新火试新茶"
+            },
+            {
+                imgSrc: "../media/photo31.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "诗酒趁年华"
+            },
+            {
+                imgSrc: "../media/photo32.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "山高水长，来日方长"
+            },
+            {
+                imgSrc: "../media/photo33.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "岁月无声，心中有光"
+            },
+            {
+                imgSrc: "../media/photo34.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "一别两宽，各生欢喜"
+            },
+            {
+                type: "video",
+                src: "../media/video5.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo35.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "前路漫漫，亦有花开"
+            },
+            {
+                imgSrc: "../media/photo36.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "时光清浅，许你安然"
+            },
+            {
+                imgSrc: "../media/photo37.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "山河远阔，人间烟火"
+            },
+            {
+                imgSrc: "../media/photo38.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "且听风吟，静待花开"
+            },
+            {
+                imgSrc: "../media/photo39.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "岁月如歌，时光如水"
+            },
+            {
+                imgSrc: "../media/photo40.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "心若向阳，无畏悲伤"
+            },
+            {
+                type: "video",
+                src: "../media/video6.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo41.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "春风有信，花开有期"
+            },
+            {
+                imgSrc: "../media/photo42.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "所念皆星河"
+            },
+            {
+                imgSrc: "../media/photo43.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿你被世界温柔以待"
+            },
+            {
+                imgSrc: "../media/photo44.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "岁月不居，时节如流"
+            },
+            {
+                imgSrc: "../media/photo45.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "心有山海，静而无边"
+            },
+            {
+                imgSrc: "../media/photo46.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "时光知味，岁月沉香"
+            },
+            {
+                type: "video",
+                src: "../media/video7.mp4",
+                date: "动态光影",
+                location: "时光留声",
+                feeling: "流动的回忆"
+            },
+            {
+                imgSrc: "../media/photo47.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "且以深情共白头"
+            },
+            {
+                imgSrc: "../media/photo48.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿有岁月可回首"
+            },
+            {
+                imgSrc: "../media/photo49.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "且以深情共白头"
+            },
+            {
+                imgSrc: "../media/photo50.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "山河无恙，人间皆安"
+            },
+            {
+                imgSrc: "../media/photo51.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "岁月静好，来日可期"
+            },
+            {
+                imgSrc: "../media/photo52.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "心之所向，行之所往"
+            },
+            {
+                imgSrc: "../media/photo53.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿你一生被爱"
+            },
+            {
+                imgSrc: "../media/photo54.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "温柔待人，也被温柔以待"
+            },
+            {
+                imgSrc: "../media/photo55.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "时光不老，我们不散"
+            },
+            {
+                imgSrc: "../media/photo56.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿你眼里有星辰"
+            },
+            {
+                imgSrc: "../media/photo57.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "心中有山海"
+            },
+            {
+                imgSrc: "../media/photo58.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "从此以梦为马"
+            },
+            {
+                imgSrc: "../media/photo59.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "不负韶华"
+            },
+            {
+                imgSrc: "../media/photo60.jpg",
+                date: "美好瞬间",
+                location: "珍藏回忆",
+                feeling: "愿时光能缓，故人不散"
+            }
+        ];
+
+        function getRandomRotation() {
+            return (Math.random() - 0.5) * 10;
+        }
+
+        function getRandomScale() {
+            return 0.92 + Math.random() * 0.16;
+        }
+
+        function getTapeRotation() {
+            return (Math.random() - 0.5) * 20;
+        }
+
+        function createPhotoCard(data, index) {
+            const rotation = getRandomRotation();
+            const scale = getRandomScale();
+            const tapeRotation = getTapeRotation();
+
+            const card = document.createElement('div');
+            card.className = 'photo-card';
+            card.style.setProperty('--rotation', `${rotation}deg`);
+            card.style.setProperty('--scale', scale);
+            card.style.animationDelay = `${index * 0.15}s`;
+            card.dataset.index = index;
+
+            const tapePositions = ['tape-top', 'tape-corner tape-left', 'tape-corner tape-right'];
+            const randomTapePosition = tapePositions[Math.floor(Math.random() * tapePositions.length)];
+
+            let mediaContent = '';
+            if (data.type === 'video') {
+                mediaContent = `<video class="photo-image lazy-video" src="${data.src}" loop muted playsinline loading="lazy" data-src="${data.src}"></video>`;
+            } else {
+                const longImageClass = data.isLongImage ? ' long-image' : '';
+                const imgSrc = data.imgSrc;
+                const webpSrc = imgSrc.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+                mediaContent = `
+                    <picture>
+                        <source srcset="${webpSrc}" type="image/webp">
+                        <img class="photo-image${longImageClass}" src="${imgSrc}" alt="回忆照片" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'no-photos\\'><div class=\\'no-photos-icon\\'></div><p class=\\'no-photos-text\\'>图片加载失败</p></div>'">
+                    </picture>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="tape ${randomTapePosition}" style="--tape-rotation: ${tapeRotation}deg"></div>
+                <div class="photo-image-wrapper skeleton-wrapper">
+                    ${mediaContent}
+                </div>
+                <div class="photo-overlay"></div>
+                <div class="photo-zoom-hint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="M21 21l-4.35-4.35"></path>
+                        <path d="M11 8v6M8 11h6"></path>
+                    </svg>
+                </div>
+                <div class="photo-info">
+                    <div class="photo-date">${data.date}</div>
+                    <div class="photo-location">${data.location}</div>
+                    <div class="photo-feeling">${data.feeling}</div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function createQuoteCard(quote, index) {
+            const rotation = getRandomRotation();
+            const scale = getRandomScale();
+            const tapeRotation = getTapeRotation();
+
+            const card = document.createElement('div');
+            card.className = 'quote-card';
+            card.style.setProperty('--rotation', `${rotation}deg`);
+            card.style.setProperty('--scale', scale);
+            card.style.animationDelay = `${index * 0.15}s`;
+
+            const tapePositions = ['tape-top', 'tape-corner tape-left', 'tape-corner tape-right'];
+            const randomTapePosition = tapePositions[Math.floor(Math.random() * tapePositions.length)];
+
+            card.innerHTML = `
+                <div class="tape ${randomTapePosition}" style="--tape-rotation: ${tapeRotation}deg"></div>
+                <div class="quote-content">
+                    <div class="quote-mark">"</div>
+                    <p class="quote-text">${quote.text}</p>
+                    <div class="quote-decoration">
+                        <span class="quote-line"></span>
+                        <span class="quote-star"></span>
+                        <span class="quote-line"></span>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function renderPhotoWall() {
+            const photoWall = document.getElementById('photoWall');
+            
+            if (!photoData || photoData.length === 0) {
+                photoWall.innerHTML = `
+                    <div class="no-photos">
+                        <div class="no-photos-icon"></div>
+                        <p class="no-photos-text">暂无照片</p>
+                        <p class="no-photos-hint">请在 photoData 数组中添加您的照片数据</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const shuffledQuotes = [...quotesData].sort(() => Math.random() - 0.5);
+            let quoteIndex = 0;
+            let itemIndex = 0;
+            let mediaIndex = 0;
+
+            photoData.forEach((data, index) => {
+                const card = createPhotoCard(data, mediaIndex);
+                photoWall.appendChild(card);
+                itemIndex++;
+                mediaIndex++;
+
+                if ((index + 1) % 3 === 0 && quoteIndex < shuffledQuotes.length) {
+                    const quoteCard = createQuoteCard(shuffledQuotes[quoteIndex], itemIndex);
+                    photoWall.appendChild(quoteCard);
+                    quoteIndex++;
+                    itemIndex++;
+                }
+            });
+
+            observePhotoCards();
+            initWhisper();
+        }
+
+        function observePhotoCards() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        
+                        const video = entry.target.querySelector('.lazy-video');
+                        if (video) {
+                            video.play().catch(() => {});
+                        }
+                        
+                        const wrapper = entry.target.querySelector('.photo-image-wrapper');
+                        if (wrapper) {
+                            wrapper.classList.remove('skeleton-wrapper');
+                        }
+                        
+                        observer.unobserve(entry.target);
+                    } else {
+                        const video = entry.target.querySelector('.lazy-video');
+                        if (video && !video.paused) {
+                            video.pause();
+                        }
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            document.querySelectorAll('.photo-card, .quote-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
+
+        function initBackToTop() {
+            const backToTopBtn = document.getElementById('backToTop');
+            
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 500) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            });
+            
+            backToTopBtn.addEventListener('click', () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        let currentLightboxIndex = 0;
+        let lightboxMediaList = [];
+
+        function initLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightboxImage');
+            const lightboxVideo = document.getElementById('lightboxVideo');
+            const lightboxClose = document.getElementById('lightboxClose');
+            const lightboxBackdrop = document.getElementById('lightboxBackdrop');
+            const lightboxPrev = document.getElementById('lightboxPrev');
+            const lightboxNext = document.getElementById('lightboxNext');
+            const lightboxInfo = document.getElementById('lightboxInfo');
+            const lightboxCounter = document.getElementById('lightboxCounter');
+
+            document.addEventListener('click', (e) => {
+                const card = e.target.closest('.photo-card');
+                if (card) {
+                    const index = parseInt(card.dataset.index);
+                    openLightbox(index);
+                }
+            });
+
+            lightboxClose.addEventListener('click', closeLightbox);
+            lightboxBackdrop.addEventListener('click', closeLightbox);
+            lightboxPrev.addEventListener('click', () => navigateLightbox(-1));
+            lightboxNext.addEventListener('click', () => navigateLightbox(1));
+
+            document.addEventListener('keydown', (e) => {
+                if (!lightbox.classList.contains('active')) return;
+                
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') navigateLightbox(-1);
+                if (e.key === 'ArrowRight') navigateLightbox(1);
+            });
+
+            function openLightbox(index) {
+                lightboxMediaList = photoData.filter(item => !item.type || item.type !== 'quote');
+                currentLightboxIndex = index;
+                
+                updateLightboxContent();
+                lightbox.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeLightbox() {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = '';
+                lightboxVideo.pause();
+            }
+
+            function navigateLightbox(direction) {
+                currentLightboxIndex += direction;
+                if (currentLightboxIndex < 0) currentLightboxIndex = lightboxMediaList.length - 1;
+                if (currentLightboxIndex >= lightboxMediaList.length) currentLightboxIndex = 0;
+                updateLightboxContent();
+            }
+
+            function updateLightboxContent() {
+                const item = lightboxMediaList[currentLightboxIndex];
+                
+                if (item.type === 'video') {
+                    lightboxImage.style.display = 'none';
+                    lightboxVideo.style.display = 'block';
+                    lightboxVideo.src = item.src;
+                    lightboxVideo.load();
+                    lightboxVideo.play().catch(() => {});
+                } else {
+                    lightboxVideo.style.display = 'none';
+                    lightboxVideo.pause();
+                    lightboxVideo.src = '';
+                    lightboxImage.style.display = 'block';
+                    
+                    const imgSrc = item.imgSrc;
+                    const webpSrc = imgSrc.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+                    
+                    const testImg = new Image();
+                    testImg.onload = function() {
+                        lightboxImage.src = webpSrc;
+                    };
+                    testImg.onerror = function() {
+                        lightboxImage.src = imgSrc;
+                    };
+                    testImg.src = webpSrc;
+                }
+
+                lightboxInfo.querySelector('.lightbox-date').textContent = item.date;
+                lightboxInfo.querySelector('.lightbox-location').textContent = item.location;
+                lightboxInfo.querySelector('.lightbox-feeling').textContent = item.feeling;
+                lightboxCounter.textContent = `${currentLightboxIndex + 1} / ${lightboxMediaList.length}`;
+            }
+        }
+
+        function initWhisper() {
+            const whisperTrigger = document.getElementById('whisperTrigger');
+            const whisperContent = document.getElementById('whisperContent');
+            const whisperText = document.getElementById('whisperText');
+            const whisperAuthor = document.getElementById('whisperAuthor');
+
+            let isWhisperVisible = false;
+            let currentQuoteIndex = 0;
+
+            function showWhisper() {
+                const quote = whisperQuotes[currentQuoteIndex];
+                whisperText.textContent = quote.text;
+                whisperAuthor.textContent = `— ${quote.author}`;
+                whisperContent.classList.add('visible');
+                isWhisperVisible = true;
+            }
+
+            function hideWhisper() {
+                whisperContent.classList.remove('visible');
+                isWhisperVisible = false;
+            }
+
+            function toggleWhisper() {
+                if (isWhisperVisible) {
+                    hideWhisper();
+                } else {
+                    currentQuoteIndex = (currentQuoteIndex + 1) % whisperQuotes.length;
+                    showWhisper();
+                }
+            }
+
+            whisperTrigger.addEventListener('click', toggleWhisper);
+
+            whisperTrigger.addEventListener('mouseenter', () => {
+                if (!isWhisperVisible) {
+                    showWhisper();
+                }
+            });
+
+            whisperTrigger.addEventListener('mouseleave', () => {
+                setTimeout(() => {
+                    if (!whisperContent.matches(':hover') && !whisperTrigger.matches(':hover')) {
+                        hideWhisper();
+                    }
+                }, 300);
+            });
+
+            whisperContent.addEventListener('mouseleave', () => {
+                setTimeout(() => {
+                    if (!whisperContent.matches(':hover') && !whisperTrigger.matches(':hover')) {
+                        hideWhisper();
+                    }
+                }, 300);
+            });
+
+            let scrollTimeout;
+            window.addEventListener('scroll', () => {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    const scrollHeight = document.documentElement.scrollHeight;
+                    const scrollTop = window.scrollY;
+                    const clientHeight = window.innerHeight;
+                    
+                    if (scrollTop + clientHeight >= scrollHeight - 100) {
+                        if (!isWhisperVisible) {
+                            currentQuoteIndex = Math.floor(Math.random() * whisperQuotes.length);
+                            showWhisper();
+                            setTimeout(hideWhisper, 5000);
+                        }
+                    }
+                }, 100);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const pageLoader = document.getElementById('pageLoader');
+            const loaderProgressBar = document.getElementById('loaderProgressBar');
+            let loadProgress = 0;
+
+            const loadingInterval = setInterval(() => {
+                loadProgress += Math.random() * 15;
+                if (loadProgress >= 100) {
+                    loadProgress = 100;
+                    clearInterval(loadingInterval);
+                    setTimeout(() => {
+                        pageLoader.classList.add('hidden');
+                    }, 500);
+                }
+                loaderProgressBar.style.width = loadProgress + '%';
+            }, 200);
+
+            const loginForm = document.getElementById('loginForm');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const passwordInput = document.getElementById('passwordInput');
+
+            loginForm.addEventListener('submit', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+
+            passwordInput.addEventListener('input', function() {
+                const loginError = document.getElementById('loginError');
+                loginError.classList.remove('show');
+            });
+
+            if (checkAuth()) {
+                hideLogin();
+                initSidebar();
+                renderPhotoWall();
+            } else {
+                showLogin();
+            }
+
+            initBackToTop();
+            initLightbox();
+
+            const bgMusic = document.getElementById('bgMusic');
+            bgMusic.volume = 0.15; 
+
+            const playMusic = () => {
+                // 只有当音乐处于暂停状态时才尝试播放，避免重复调用 play()
+                if (bgMusic.paused) {
+                    const playPromise = bgMusic.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log("背景音乐已开始播放");
+                        }).catch(error => {
+                            console.log("浏览器拦截了自动播放。需等待用户首次交互。");
+                        });
+                    }
+                }
+            };
+
+            // 使用 requestIdleCallback 确保在主线程空闲时触发音频，避免阻塞 UI 渲染
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => playMusic());
+            } else {
+                setTimeout(playMusic, 500);
+            }
+
+            // 监听多个交互事件，只要触发一个就播放，并使用 capture 阶段尽早捕获
+            const initPlayOnInteract = () => {
+                playMusic();
+                ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => {
+                    document.removeEventListener(evt, initPlayOnInteract, true);
+                });
+            };
+
+            ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => {
+                document.addEventListener(evt, initPlayOnInteract, { once: true, capture: true, passive: true });
+            });
+
+            initLoveEnvelope();
+        });
+
+        function initLoveEnvelope() {
+            const sliderContainer = document.getElementById('sliderContainer');
+            const sliderThumb = document.getElementById('sliderThumb');
+            const sliderProgress = document.getElementById('sliderProgress');
+            const sliderLock = document.getElementById('sliderLock');
+            const sliderUnlock = document.getElementById('sliderUnlock');
+            const loveLetterModal = document.getElementById('loveLetterModal');
+            const letterClose = document.getElementById('letterClose');
+            const letterBackdrop = document.getElementById('letterBackdrop');
+            const particlesContainer = document.getElementById('envelopeParticles');
+
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'envelope-particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (6 + Math.random() * 4) + 's';
+                particlesContainer.appendChild(particle);
+            }
+
+            let isDragging = false;
+            let startX = 0;
+            let currentX = 0;
+            const thumbWidth = 60;
+            let maxDistance = 0;
+
+            function updateSliderPosition(clientX) {
+                const rect = sliderContainer.getBoundingClientRect();
+                maxDistance = rect.width - thumbWidth - 10;
+                
+                let newX = clientX - rect.left - thumbWidth / 2;
+                newX = Math.max(5, Math.min(newX, maxDistance));
+                
+                const progress = (newX - 5) / (maxDistance - 5);
+                
+                sliderThumb.style.left = newX + 'px';
+                sliderProgress.style.width = (progress * 100) + '%';
+                
+                if (progress > 0.9) {
+                    sliderContainer.classList.add('slider-unlocked');
+                } else {
+                    sliderContainer.classList.remove('slider-unlocked');
+                }
+                
+                return progress;
+            }
+
+            function handleStart(e) {
+                e.preventDefault();
+                isDragging = true;
+                sliderThumb.classList.add('dragging');
+                
+                const touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX;
+                
+                updateSliderPosition(touch.clientX);
+            }
+
+            function handleMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                
+                const touch = e.touches ? e.touches[0] : e;
+                currentX = touch.clientX;
+                
+                updateSliderPosition(touch.clientX);
+            }
+
+            function handleEnd(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                sliderThumb.classList.remove('dragging');
+                
+                const rect = sliderContainer.getBoundingClientRect();
+                maxDistance = rect.width - thumbWidth - 10;
+                const currentLeft = parseFloat(sliderThumb.style.left) || 5;
+                const progress = (currentLeft - 5) / (maxDistance - 5);
+                
+                if (progress > 0.85) {
+                    showLoveLetter();
+                } else {
+                    resetSlider();
+                }
+            }
+
+            function resetSlider() {
+                sliderThumb.style.transition = 'left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                sliderProgress.style.transition = 'width 0.4s ease';
+                
+                sliderThumb.style.left = '5px';
+                sliderProgress.style.width = '0';
+                sliderContainer.classList.remove('slider-unlocked');
+                
+                setTimeout(() => {
+                    sliderThumb.style.transition = '';
+                    sliderProgress.style.transition = '';
+                }, 400);
+            }
+
+            function showLoveLetter() {
+                loveLetterModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function hideLoveLetter() {
+                loveLetterModal.classList.remove('active');
+                document.body.style.overflow = '';
+                resetSlider();
+            }
+
+            sliderThumb.addEventListener('mousedown', handleStart);
+            sliderThumb.addEventListener('touchstart', handleStart, { passive: false });
+            
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('touchmove', handleMove, { passive: false });
+            
+            document.addEventListener('mouseup', handleEnd);
+            document.addEventListener('touchend', handleEnd);
+            
+            letterClose.addEventListener('click', hideLoveLetter);
+            letterBackdrop.addEventListener('click', hideLoveLetter);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && loveLetterModal.classList.contains('active')) {
+                    hideLoveLetter();
+                }
+            });
+        }
+
+        const lyricsData = [
+            { time: 0, text: "A Little Love - 冯曦妤" },
+            { time: 13, text: "Greatness as you, Smallest as me · 伟大如你，渺小如我" },
+            { time: 18.76, text: "You show me what is deep as sea · 你的爱如大海一般温暖深沉" },
+            { time: 24.5, text: "A little love, little kiss · 柔柔的爱，浅浅的吻" },
+            { time: 27.73, text: "A little hug, little gift · 轻轻的拥抱，小小的礼物" },
+            { time: 30.79, text: "All of little something, these are our memories · 这些点点滴滴，都是只属于我们的温存" },
+            { time: 35.96, text: "You make me cry, Make me smile · 你让我哭，让我笑" },
+            { time: 39.69, text: "Make me feel that love is true · 让我感受爱的真谛" },
+            { time: 42.46, text: "You always stand by my side · 你总是陪在我身边" },
+            { time: 45.21, text: "I don't want to say goodbye · 我不愿意说再见" },
+            { time: 47.82, text: "You make me cry, Make me smile · 你让我哭，让我笑" },
+            { time: 51.53, text: "Make me feel the joy of love · 爱情的喜悦喧嚣" },
+            { time: 54.13, text: "Oh kissing you · 让我温柔地吻你" },
+            { time: 56.31, text: "Thank you for all the love you always give to me · 谢谢你一直以来给我的爱" },
+            { time: 61.51, text: "Oh I love you · 噢，我爱你" },
+            { time: 66.33, text: "Greatness as you, Smallest as me · 伟大如你，渺小如我" },
+            { time: 72.08, text: "You show me what is deep as sea · 你的爱如大海一般温暖深沉" },
+            { time: 77.9, text: "A little love, little kiss · 柔柔的爱，浅浅的吻" },
+            { time: 81.08, text: "A little hug, little gift · 轻轻的拥抱，小小的礼物" },
+            { time: 84.15, text: "All of little something, these are our memories · 这些点点滴滴，都是只属于我们的温存" },
+            { time: 89.31, text: "You make me cry, Make me smile · 你让我哭，让我笑" },
+            { time: 93.05, text: "Make me feel that love is true · 让我感受爱的真谛" },
+            { time: 95.78, text: "You always stand by my side · 你总是陪在我身边" },
+            { time: 98.58, text: "I don't want to say goodbye · 我不愿意说再见" },
+            { time: 101.17, text: "You make me cry, Make me smile · 你让我哭，让我笑" },
+            { time: 104.87, text: "Make me feel the joy of love · 爱情的喜悦喧嚣" },
+            { time: 107.46, text: "Oh kissing you · 让我温柔地吻你" },
+            { time: 109.68, text: "Thank you for all the love you always give to me · 谢谢你一直以来给我的爱" },
+            { time: 114.85, text: "Oh I love you, Yes I do · 噢，我爱你，真的爱你" },
+            { time: 130.04, text: "I always do · 我永远爱你" },
+            { time: 140.46, text: "Make me cry, Make me smile · 让我哭，让我笑" },
+            { time: 144.21, text: "Make me feel that love is true · 让我感受爱的真谛" },
+            { time: 146.16, text: "You always stand by my side · 你总是陪在我身边" },
+            { time: 148.57, text: "I don't want to say goodbye · 我不愿意说再见" },
+            { time: 151.52, text: "You make me cry, Make me smile · 让我哭，让我笑" },
+            { time: 155.21, text: "Make me feel the joy of love · 爱情的喜悦喧嚣" },
+            { time: 157.85, text: "Oh kissing you · 让我温柔地吻你" },
+            { time: 160.04, text: "Thank you for all the love you always give to me · 谢谢你一直以来给我的爱" },
+            { time: 165.23, text: "Oh I love you · 噢，我爱你" },
+            { time: 171.19, text: "To be with you, Oh I love you · 想和你在一起，噢，我爱你" }
+        ];
+
+        function initLyricsSync() {
+            const bgMusic = document.getElementById('bgMusic');
+            const lyricsText = document.getElementById('lyricsText');
+            const lyricsMarquee = document.getElementById('lyricsMarquee');
+            let currentLyricIndex = 0;
+
+            bgMusic.addEventListener('timeupdate', () => {
+                const currentTime = bgMusic.currentTime;
+                
+                for (let i = lyricsData.length - 1; i >= 0; i--) {
+                    if (currentTime >= lyricsData[i].time) {
+                        if (currentLyricIndex !== i) {
+                            currentLyricIndex = i;
+                            lyricsText.textContent = lyricsData[i].text;
+                        }
+                        break;
+                    }
+                }
+            });
+
+            lyricsMarquee.addEventListener('click', () => {
+                if (bgMusic.paused) {
+                    bgMusic.play();
+                } else {
+                    bgMusic.pause();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initLyricsSync);
+
+        // ==== “日照金山”震撼光影特效配置 ====
+        // 优化性能：适当减少光束和能量波帧数
+        const RAY_COUNT = 8; // 减少上帝光的数量
+        const RAY_BASE_ANGLE = Math.PI / 4; 
+        const BURST_DURATION_FRAMES = 30; // 减少能量波的计算时间
+
+        // 初始化 Canvas
+        const canvas = document.getElementById('snowCanvas');
+        // 恢复 alpha: true，否则整个背景会变成纯黑遮挡页面
+        const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+        
+        let canvasWidth = window.innerWidth;
+        let canvasHeight = window.innerHeight;
+        
+        function resizeCanvas() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 光束类：用于全局上帝光效果
+        class GodRay {
+            constructor() {
+                this.init();
+                // 初始相位随机，让光线呼吸感错开
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            init() {
+                // 光束起点分布在屏幕上方和左侧，以形成向右下倾斜的上帝光
+                this.x = Math.random() * (canvasWidth + canvasHeight) - canvasHeight;
+                this.width = Math.random() * 150 + 50; // 光束宽度
+                this.angle = RAY_BASE_ANGLE + (Math.random() - 0.5) * 0.15; // 基础角度上的微小偏差
+                this.speed = Math.random() * 0.005 + 0.002; // 呼吸和缓慢移动速度
+                this.maxAlpha = Math.random() * 0.12 + 0.05; // 柔和的透明度
+            }
+
+            update() {
+                this.phase += this.speed;
+                // 利用正弦函数制造光线的“呼吸感”（明暗交替）
+                this.alpha = ((Math.sin(this.phase) + 1) / 2) * this.maxAlpha;
+                // 光束轻微的横向流动
+                this.x += Math.sin(this.phase * 0.5) * 0.3;
+
+                // 如果光线完全飘出屏幕，重新生成
+                if (this.x > canvasWidth + canvasHeight) {
+                    this.init();
+                    this.x = -this.width - 100;
+                }
+            }
+
+            draw() {
+                if (this.alpha <= 0.01) return;
+
+                // 计算光束终点坐标
+                const endX = this.x + Math.cos(this.angle) * (canvasHeight * 2);
+                const endY = Math.sin(this.angle) * (canvasHeight * 2);
+
+                // 创建线性渐变：从上到下颜色逐渐淡出
+                const grad = ctx.createLinearGradient(this.x, 0, endX, endY);
+                grad.addColorStop(0, `rgba(255, 230, 150, ${this.alpha})`); // 顶部明亮金黄
+                grad.addColorStop(0.5, `rgba(255, 180, 80, ${this.alpha * 0.6})`); // 中部柔和橙色
+                grad.addColorStop(1, `rgba(255, 150, 50, 0)`); // 底部完全透明
+
+                ctx.beginPath();
+                // 绘制多边形光束
+                ctx.moveTo(this.x - this.width / 2, 0);
+                ctx.lineTo(this.x + this.width / 2, 0);
+                ctx.lineTo(endX + this.width / 2, endY);
+                ctx.lineTo(endX - this.width / 2, endY);
+                
+                ctx.fillStyle = grad;
+                ctx.globalCompositeOperation = 'screen'; // 采用滤色混合模式，叠加更亮
+                ctx.fill();
+                ctx.globalCompositeOperation = 'source-over'; // 恢复默认
+            }
+        }
+
+        // 能量波类：用于点击扩散效果
+        class EnergyBurst {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.maxRadius = Math.random() * 50 + 120; // 扩散的最大半径
+                this.life = BURST_DURATION_FRAMES;
+                this.maxLife = BURST_DURATION_FRAMES;
+            }
+
+            update() {
+                // 缓动动画扩散半径
+                this.radius += (this.maxRadius - this.radius) * 0.15;
+                this.life--;
+            }
+
+            draw() {
+                if (this.life <= 0) return;
+                
+                const progress = this.life / this.maxLife; // 1 到 0
+                
+                // 绘制外圈光环
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 215, 0, ${progress * 0.8})`; // 金色光环
+                ctx.lineWidth = 3 * progress;
+                ctx.stroke();
+
+                // 绘制内圈发光区域
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.8, 0, Math.PI * 2);
+                const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 0.8);
+                grad.addColorStop(0, `rgba(255, 255, 200, ${progress * 0.4})`);
+                grad.addColorStop(1, `rgba(255, 150, 50, 0)`);
+                ctx.fillStyle = grad;
+                ctx.fill();
+            }
+        }
+
+        const godRays = [];
+        for (let i = 0; i < RAY_COUNT; i++) {
+            godRays.push(new GodRay());
+        }
+
+        const energyBursts = [];
+
+        // 监听全局点击事件，触发能量波
+        document.addEventListener('click', (e) => {
+            energyBursts.push(new EnergyBurst(e.clientX, e.clientY));
+        });
+
+        // 动画循环
+        let animationFrameId;
+        function animateCanvas() {
+            // 清空画布
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // 更新和绘制上帝光射线
+            godRays.forEach(ray => {
+                ray.update();
+                ray.draw();
+            });
+
+            // 更新和绘制点击能量波
+            for (let i = energyBursts.length - 1; i >= 0; i--) {
+                const burst = energyBursts[i];
+                burst.update();
+                burst.draw();
+                // 生命周期结束则移除
+                if (burst.life <= 0) {
+                    energyBursts.splice(i, 1);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(animateCanvas);
+        }
+
+        // 使用 IntersectionObserver 优化：当页面不可见（如切换标签页）时停止渲染
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                if (!animationFrameId) animateCanvas();
+            } else {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+            }
+        });
+        observer.observe(document.body);
+    </script>
+</body>
+</html>
