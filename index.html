@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -8,10 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link rel="preload" href="media/photo1.jpg" as="image">
-    <link rel="preload" href="media/photo2.jpg" as="image">
-    <link rel="preload" href="media/photo3.jpg" as="image">
-    <link rel="preload" href="a-little-love.mp3" as="audio">
+    <link rel="preload" href="media/photo1.webp" as="image">
+    <link rel="preload" href="media/photo2.webp" as="image">
+    <link rel="preload" href="media/photo3.webp" as="image">
 </head>
 <body>
     <div class="page-loader" id="pageLoader">
@@ -251,8 +250,8 @@
     </div>
 
     <!-- 隐藏的背景音乐播放器 -->
-    <!-- 优化：使用 preload="none" 延迟加载，用户交互后才加载音乐 -->
-    <audio id="bgMusic" loop preload="none">
+    <!-- 专业音频优化：使用 preload="auto" 配合智能缓冲策略 -->
+    <audio id="bgMusic" loop preload="auto" crossorigin="anonymous">
         <source src="a-little-love.mp3" type="audio/mpeg">
     </audio>
 
@@ -260,6 +259,16 @@
         <div class="lyrics-track" id="lyricsTrack">
             <span class="lyrics-text" id="lyricsText">Greatness as you, Smallest as me...</span>
         </div>
+    </div>
+
+    <!-- 音频加载状态指示器 -->
+    <div class="audio-loading-indicator" id="audioLoadingIndicator">
+        <div class="audio-loading-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+        </div>
+        <span class="audio-loading-text" id="audioLoadingText">音乐准备中...</span>
     </div>
 
     <script>
@@ -1279,53 +1288,282 @@
             initLightbox();
 
             const bgMusic = document.getElementById('bgMusic');
-            bgMusic.volume = 0.15;
+            bgMusic.volume = 0;
 
-            let musicLoaded = false;
-            let musicLoading = false;
+            // GitHub Pages 音频优化：针对高延迟网络的预加载策略
+            const audioOptimizer = {
+                audioBlob: null,
+                audioUrl: null,
+                isLoaded: false,
+                isLoading: false,
+                abortController: null,
 
-            const loadAndPlayMusic = () => {
-                if (musicLoading) return;
-                if (!musicLoaded) {
-                    musicLoading = true;
-                    bgMusic.load();
-                    bgMusic.addEventListener('canplaythrough', () => {
-                        musicLoaded = true;
-                        musicLoading = false;
-                        bgMusic.play().catch(() => {});
-                    }, { once: true });
-                    bgMusic.addEventListener('error', () => {
-                        musicLoading = false;
-                    }, { once: true });
-                } else {
-                    if (bgMusic.paused) {
-                        bgMusic.play().catch(() => {});
+                // 取消正在进行的加载
+                abortLoading() {
+                    if (this.abortController) {
+                        this.abortController.abort();
+                        this.abortController = null;
+                    }
+                },
+
+                // 预加载音频到内存（带超时和重试机制）
+                async preloadAudio(retryCount = 0) {
+                    if (this.isLoading || this.isLoaded) return;
+                    this.isLoading = true;
+
+                    const loadingIndicator = document.getElementById('audioLoadingIndicator');
+                    const loadingText = document.getElementById('audioLoadingText');
+                    if (loadingIndicator) loadingIndicator.classList.add('visible');
+
+                    // 创建新的 AbortController
+                    this.abortController = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        this.abortController.abort();
+                    }, 15000); // 15秒超时
+
+                    try {
+                        // 使用 fetch 预加载音频文件，带缓存策略
+                        const response = await fetch('a-little-love.mp3', {
+                            method: 'GET',
+                            signal: this.abortController.signal,
+                            cache: 'default', // 使用浏览器默认缓存策略
+                            headers: {
+                                'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8'
+                            }
+                        });
+
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) throw new Error('音频加载失败: ' + response.status);
+
+                        // 更新加载进度文字
+                        const contentLength = response.headers.get('content-length');
+                        const totalSize = contentLength ? (parseInt(contentLength) / 1024).toFixed(1) : '?';
+                        if (loadingText) loadingText.textContent = `加载中 ${totalSize}KB...`;
+
+                        this.audioBlob = await response.blob();
+                        this.audioUrl = URL.createObjectURL(this.audioBlob);
+                        this.isLoaded = true;
+
+                        if (loadingText) loadingText.textContent = '音乐已就绪 ♪';
+
+                        // 设置音频源为 Blob URL（从内存播放，不依赖网络）
+                        bgMusic.src = this.audioUrl;
+                        bgMusic.load();
+
+                        // 1秒后隐藏加载指示器
+                        setTimeout(() => {
+                            if (loadingIndicator) loadingIndicator.classList.remove('visible');
+                        }, 1000);
+
+                    } catch (error) {
+                        clearTimeout(timeoutId);
+
+                        if (error.name === 'AbortError') {
+                            // 超时，尝试重试
+                            if (retryCount < 2) {
+                                this.isLoading = false;
+                                if (loadingText) loadingText.textContent = `重试中 (${retryCount + 1}/2)...`;
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                return this.preloadAudio(retryCount + 1);
+                            }
+                        }
+
+                        // 如果 fetch 失败，回退到原始 URL（流式播放）
+                        if (loadingText) loadingText.textContent = '使用在线播放模式';
+                        bgMusic.src = 'a-little-love.mp3';
+                        bgMusic.load();
+                    } finally {
+                        this.isLoading = false;
+                        this.abortController = null;
                     }
                 }
             };
 
-            const playMusic = () => {
-                if (bgMusic.paused) {
+            // 专业音频播放管理系统（针对慢网络优化）
+            const audioManager = {
+                isReady: false,
+                isPlaying: false,
+                fadeInterval: null,
+                bufferCheckInterval: null,
+                minBufferSeconds: 5, // GitHub Pages 网络慢，增加到5秒缓冲
+                loadTimeout: null,
+
+                // 平滑淡入
+                fadeIn(targetVolume = 0.15, duration = 2000) {
+                    const steps = 20;
+                    const stepValue = targetVolume / steps;
+                    const stepTime = duration / steps;
+                    let currentStep = 0;
+
+                    this.clearFadeInterval();
+
+                    this.fadeInterval = setInterval(() => {
+                        currentStep++;
+                        bgMusic.volume = Math.min(stepValue * currentStep, targetVolume);
+
+                        if (currentStep >= steps) {
+                            this.clearFadeInterval();
+                            bgMusic.volume = targetVolume;
+                        }
+                    }, stepTime);
+                },
+
+                clearFadeInterval() {
+                    if (this.fadeInterval) {
+                        clearInterval(this.fadeInterval);
+                        this.fadeInterval = null;
+                    }
+                },
+
+                // 检查缓冲状态
+                checkBuffer() {
+                    if (bgMusic.buffered.length > 0) {
+                        const bufferedEnd = bgMusic.buffered.end(bgMusic.buffered.length - 1);
+                        const currentTime = bgMusic.currentTime || 0;
+                        const bufferedAhead = bufferedEnd - currentTime;
+                        return bufferedAhead >= this.minBufferSeconds;
+                    }
+                    return false;
+                },
+
+                // 智能播放（确保足够缓冲后才播放）
+                smartPlay() {
+                    if (this.isPlaying) return;
+
+                    // 如果已经有足够缓冲，直接播放
+                    if (this.checkBuffer()) {
+                        this.doPlay();
+                        return;
+                    }
+
+                    // 否则等待缓冲
+                    this.waitForBuffer();
+                },
+
+                doPlay() {
                     const playPromise = bgMusic.play();
                     if (playPromise !== undefined) {
                         playPromise.then(() => {
-                            console.log("背景音乐已开始播放");
+                            this.isPlaying = true;
+                            this.fadeIn();
                         }).catch(error => {
-                            console.log("浏览器拦截了自动播放。需等待用户首次交互。");
+                            this.isPlaying = false;
                         });
                     }
+                },
+
+                waitForBuffer() {
+                    this.clearBufferCheck();
+
+                    const loadingIndicator = document.getElementById('audioLoadingIndicator');
+                    if (loadingIndicator) loadingIndicator.classList.add('visible');
+
+                    this.bufferCheckInterval = setInterval(() => {
+                        if (this.checkBuffer()) {
+                            this.clearBufferCheck();
+                            this.doPlay();
+                        }
+                    }, 300);
+
+                    // 10秒后超时（GitHub Pages 网络慢，增加超时时间）
+                    this.loadTimeout = setTimeout(() => {
+                        this.clearBufferCheck();
+                        if (!this.isPlaying) {
+                            // 超时后强制播放，即使缓冲不足
+                            this.doPlay();
+                        }
+                    }, 10000);
+                },
+
+                clearBufferCheck() {
+                    if (this.bufferCheckInterval) {
+                        clearInterval(this.bufferCheckInterval);
+                        this.bufferCheckInterval = null;
+                    }
+                    if (this.loadTimeout) {
+                        clearTimeout(this.loadTimeout);
+                        this.loadTimeout = null;
+                    }
+                },
+
+                init() {
+                    const loadingIndicator = document.getElementById('audioLoadingIndicator');
+
+                    // 监听音频可以播放事件
+                    bgMusic.addEventListener('canplay', () => {
+                        this.isReady = true;
+                    }, { once: true });
+
+                    // 监听音频数据加载进度
+                    bgMusic.addEventListener('progress', () => {
+                        if (!this.isPlaying && this.checkBuffer()) {
+                            this.smartPlay();
+                        }
+                    });
+
+                    // 处理音频卡顿（缓冲不足）
+                    bgMusic.addEventListener('waiting', () => {
+                        if (loadingIndicator) loadingIndicator.classList.add('visible');
+                    });
+
+                    // 音频继续播放
+                    bgMusic.addEventListener('playing', () => {
+                        this.isPlaying = true;
+                        if (loadingIndicator) loadingIndicator.classList.remove('visible');
+                    });
+
+                    // 音频暂停
+                    bgMusic.addEventListener('pause', () => {
+                        this.isPlaying = false;
+                    });
+
+                    // 音频足够缓冲后可以播放
+                    bgMusic.addEventListener('canplaythrough', () => {
+                        if (loadingIndicator) loadingIndicator.classList.remove('visible');
+                    });
+
+                    // 错误处理
+                    bgMusic.addEventListener('error', (e) => {
+                        if (loadingIndicator) loadingIndicator.classList.remove('visible');
+                    });
                 }
             };
 
+            // 先预加载音频，再初始化播放器
+            audioOptimizer.preloadAudio().then(() => {
+                audioManager.init();
+            });
+
+            // 用户首次交互时尝试播放
             const initPlayOnInteract = () => {
-                loadAndPlayMusic();
-                ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => {
+                // 如果还没加载完，先加载
+                if (!audioOptimizer.isLoaded && !audioOptimizer.isLoading) {
+                    audioOptimizer.preloadAudio().then(() => {
+                        audioManager.smartPlay();
+                    });
+                } else {
+                    audioManager.smartPlay();
+                }
+
+                ['click', 'touchstart', 'keydown'].forEach(evt => {
                     document.removeEventListener(evt, initPlayOnInteract, true);
                 });
             };
 
-            ['click', 'scroll', 'touchstart', 'keydown'].forEach(evt => {
+            ['click', 'touchstart', 'keydown'].forEach(evt => {
                 document.addEventListener(evt, initPlayOnInteract, { once: true, capture: true, passive: true });
+            });
+
+            // 页面可见性变化处理
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    bgMusic.playbackRate = 1;
+                } else {
+                    if (bgMusic.paused && audioManager.isReady) {
+                        audioManager.smartPlay();
+                    }
+                }
             });
 
             initLoveEnvelope();
