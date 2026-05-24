@@ -1290,13 +1290,17 @@
             const bgMusic = document.getElementById('bgMusic');
             bgMusic.volume = 0;
 
-            // GitHub Pages 音频优化：针对高延迟网络的预加载策略
+            // 检测是否为移动设备
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // GitHub Pages 音频优化：针对高延迟网络和移动设备优化
             const audioOptimizer = {
                 audioBlob: null,
                 audioUrl: null,
                 isLoaded: false,
                 isLoading: false,
                 abortController: null,
+                loadStartTime: null,
 
                 // 取消正在进行的加载
                 abortLoading() {
@@ -1306,27 +1310,48 @@
                     }
                 },
 
+                // 获取音频文件大小（用于估算加载时间）
+                async getAudioSize() {
+                    try {
+                        const response = await fetch('a-little-love.mp3', { method: 'HEAD' });
+                        const size = response.headers.get('content-length');
+                        return size ? parseInt(size) : 128000; // 默认128KB
+                    } catch (e) {
+                        return 128000;
+                    }
+                },
+
                 // 预加载音频到内存（带超时和重试机制）
                 async preloadAudio(retryCount = 0) {
                     if (this.isLoading || this.isLoaded) return;
                     this.isLoading = true;
+                    this.loadStartTime = Date.now();
 
                     const loadingIndicator = document.getElementById('audioLoadingIndicator');
                     const loadingText = document.getElementById('audioLoadingText');
                     if (loadingIndicator) loadingIndicator.classList.add('visible');
 
+                    // 移动端使用更长的超时时间
+                    const timeoutDuration = isMobile ? 25000 : 15000;
+
                     // 创建新的 AbortController
                     this.abortController = new AbortController();
                     const timeoutId = setTimeout(() => {
                         this.abortController.abort();
-                    }, 15000); // 15秒超时
+                    }, timeoutDuration);
 
                     try {
-                        // 使用 fetch 预加载音频文件，带缓存策略
+                        // 获取文件大小
+                        const fileSize = await this.getAudioSize();
+                        const fileSizeKB = (fileSize / 1024).toFixed(1);
+
+                        if (loadingText) loadingText.textContent = `加载音乐 ${fileSize}KB...`;
+
+                        // 使用 fetch 预加载音频文件
                         const response = await fetch('a-little-love.mp3', {
                             method: 'GET',
                             signal: this.abortController.signal,
-                            cache: 'default', // 使用浏览器默认缓存策略
+                            cache: 'force-cache',
                             headers: {
                                 'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8'
                             }
@@ -1336,43 +1361,69 @@
 
                         if (!response.ok) throw new Error('音频加载失败: ' + response.status);
 
-                        // 更新加载进度文字
-                        const contentLength = response.headers.get('content-length');
-                        const totalSize = contentLength ? (parseInt(contentLength) / 1024).toFixed(1) : '?';
-                        if (loadingText) loadingText.textContent = `加载中 ${totalSize}KB...`;
+                        // 显示加载进度
+                        const reader = response.body.getReader();
+                        const contentLength = +response.headers.get('Content-Length');
+                        let receivedLength = 0;
+                        const chunks = [];
 
-                        this.audioBlob = await response.blob();
+                        while(true) {
+                            const {done, value} = await reader.read();
+                            if (done) break;
+                            chunks.push(value);
+                            receivedLength += value.length;
+
+                            // 更新进度
+                            if (contentLength && loadingText) {
+                                const progress = Math.round((receivedLength / contentLength) * 100);
+                                loadingText.textContent = `加载中 ${progress}%`;
+                            }
+                        }
+
+                        // 合并 chunks
+                        const allChunks = new Uint8Array(receivedLength);
+                        let position = 0;
+                        for(const chunk of chunks) {
+                            allChunks.set(chunk, position);
+                            position += chunk.length;
+                        }
+
+                        this.audioBlob = new Blob([allChunks], { type: 'audio/mpeg' });
                         this.audioUrl = URL.createObjectURL(this.audioBlob);
                         this.isLoaded = true;
 
-                        if (loadingText) loadingText.textContent = '音乐已就绪 ♪';
+                        const loadTime = ((Date.now() - this.loadStartTime) / 1000).toFixed(1);
+                        if (loadingText) loadingText.textContent = `音乐就绪 (${loadTime}s)`;
 
-                        // 设置音频源为 Blob URL（从内存播放，不依赖网络）
+                        // 设置音频源为 Blob URL
                         bgMusic.src = this.audioUrl;
                         bgMusic.load();
 
-                        // 1秒后隐藏加载指示器
+                        // 2秒后隐藏加载指示器
                         setTimeout(() => {
                             if (loadingIndicator) loadingIndicator.classList.remove('visible');
-                        }, 1000);
+                        }, 2000);
 
                     } catch (error) {
                         clearTimeout(timeoutId);
 
                         if (error.name === 'AbortError') {
-                            // 超时，尝试重试
-                            if (retryCount < 2) {
+                            if (retryCount < 3) { // 移动端增加重试次数
                                 this.isLoading = false;
-                                if (loadingText) loadingText.textContent = `重试中 (${retryCount + 1}/2)...`;
-                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                if (loadingText) loadingText.textContent = `网络较慢，重试中 (${retryCount + 1}/3)...`;
+                                await new Promise(resolve => setTimeout(resolve, 1500));
                                 return this.preloadAudio(retryCount + 1);
                             }
                         }
 
-                        // 如果 fetch 失败，回退到原始 URL（流式播放）
-                        if (loadingText) loadingText.textContent = '使用在线播放模式';
+                        // 如果 fetch 失败，回退到流式播放
+                        if (loadingText) loadingText.textContent = '使用在线播放';
                         bgMusic.src = 'a-little-love.mp3';
                         bgMusic.load();
+
+                        setTimeout(() => {
+                            if (loadingIndicator) loadingIndicator.classList.remove('visible');
+                        }, 2000);
                     } finally {
                         this.isLoading = false;
                         this.abortController = null;
@@ -1380,14 +1431,15 @@
                 }
             };
 
-            // 专业音频播放管理系统（针对慢网络优化）
+            // 专业音频播放管理系统（针对慢网络和移动端优化）
             const audioManager = {
                 isReady: false,
                 isPlaying: false,
                 fadeInterval: null,
                 bufferCheckInterval: null,
-                minBufferSeconds: 5, // GitHub Pages 网络慢，增加到5秒缓冲
+                minBufferSeconds: isMobile ? 3 : 5, // 移动端减少缓冲要求
                 loadTimeout: null,
+                hasUserInteracted: false,
 
                 // 平滑淡入
                 fadeIn(targetVolume = 0.15, duration = 2000) {
@@ -1431,6 +1483,12 @@
                 smartPlay() {
                     if (this.isPlaying) return;
 
+                    // 移动端：如果音频已完全加载到内存，直接播放
+                    if (isMobile && audioOptimizer.isLoaded) {
+                        this.doPlay();
+                        return;
+                    }
+
                     // 如果已经有足够缓冲，直接播放
                     if (this.checkBuffer()) {
                         this.doPlay();
@@ -1442,6 +1500,11 @@
                 },
 
                 doPlay() {
+                    // 移动端：确保用户已经交互过才能播放
+                    if (isMobile && !this.hasUserInteracted) {
+                        return;
+                    }
+
                     const playPromise = bgMusic.play();
                     if (playPromise !== undefined) {
                         playPromise.then(() => {
@@ -1466,14 +1529,15 @@
                         }
                     }, 300);
 
-                    // 10秒后超时（GitHub Pages 网络慢，增加超时时间）
+                    // 移动端使用更短的超时时间，更快进入播放
+                    const timeoutDuration = isMobile ? 5000 : 10000;
                     this.loadTimeout = setTimeout(() => {
                         this.clearBufferCheck();
                         if (!this.isPlaying) {
                             // 超时后强制播放，即使缓冲不足
                             this.doPlay();
                         }
-                    }, 10000);
+                    }, timeoutDuration);
                 },
 
                 clearBufferCheck() {
@@ -1537,6 +1601,9 @@
 
             // 用户首次交互时尝试播放
             const initPlayOnInteract = () => {
+                // 标记用户已交互（移动端需要）
+                audioManager.hasUserInteracted = true;
+
                 // 如果还没加载完，先加载
                 if (!audioOptimizer.isLoaded && !audioOptimizer.isLoading) {
                     audioOptimizer.preloadAudio().then(() => {
@@ -1554,6 +1621,16 @@
             ['click', 'touchstart', 'keydown'].forEach(evt => {
                 document.addEventListener(evt, initPlayOnInteract, { once: true, capture: true, passive: true });
             });
+
+            // 移动端：页面加载完成后自动开始预加载音频
+            if (isMobile) {
+                // 延迟2秒后开始预加载，避免影响页面渲染
+                setTimeout(() => {
+                    if (!audioOptimizer.isLoaded && !audioOptimizer.isLoading) {
+                        audioOptimizer.preloadAudio();
+                    }
+                }, 2000);
+            }
 
             // 页面可见性变化处理
             document.addEventListener('visibilitychange', () => {

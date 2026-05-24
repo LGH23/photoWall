@@ -474,11 +474,17 @@ footer {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* 移动端适配：使用动态视口高度 */
+    min-height: -webkit-fill-available; /* iOS Safari 适配 */
     /* 日照金山 / 日出云海 高清图片 */
     background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80');
     background-size: cover;
     background-position: center center;
     background-attachment: fixed;
+    /* 移动端禁用 fixed 背景，避免显示问题 */
+    @supports (-webkit-touch-callout: none) {
+        background-attachment: scroll;
+    }
     z-index: -3;
     pointer-events: none;
 }
@@ -490,6 +496,8 @@ footer {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* 移动端适配 */
+    min-height: -webkit-fill-available;
     background: rgba(255, 245, 230, 0.4); /* 加深遮罩颜色，提高与文字的对比度 */
     z-index: -2;
     pointer-events: none;
@@ -520,6 +528,8 @@ footer {
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* 移动端适配 */
+    min-height: -webkit-fill-available;
     z-index: 100; /* 最顶层，覆盖在照片上方 */
     pointer-events: none; /* 绝对不能阻挡点击悬停等交互 */
     overflow: hidden;
@@ -1867,6 +1877,7 @@ footer {
     text-align: center;
     font-size: 1.5rem;
     margin-top: 20px;
+    color: #e74c3c; /* 明确指定红色 */
     animation: heartbeat 1.5s ease-in-out infinite;
 }
 
