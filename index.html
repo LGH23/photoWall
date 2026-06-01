@@ -250,8 +250,8 @@
     </div>
 
     <!-- 隐藏的背景音乐播放器 -->
-    <!-- 专业音频优化：使用 preload="auto" 配合智能缓冲策略 -->
-    <audio id="bgMusic" loop preload="auto" crossorigin="anonymous">
+    <!-- 本地和在线都使用 preload="auto" -->
+    <audio id="bgMusic" loop preload="auto">
         <source src="a-little-love.mp3" type="audio/mpeg">
     </audio>
 
@@ -260,6 +260,9 @@
             <span class="lyrics-text" id="lyricsText">Greatness as you, Smallest as me...</span>
         </div>
     </div>
+
+    <!-- 音频播放按钮（备用方案） -->
+    <button id="manualPlayBtn" style="display:none;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:25px;color:white;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(255,165,0,0.4);opacity:0.9;" onclick="window.triggerMusicPlay()">🎵 点击播放音乐</button>
 
     <!-- 音频加载状态指示器 -->
     <div class="audio-loading-indicator" id="audioLoadingIndicator">
@@ -454,6 +457,11 @@
                 initSidebar();
                 renderPhotoWall();
                 passwordInput.value = '';
+
+                // 登录成功后，延迟一点触发音乐播放（登录本身就是用户交互）
+                setTimeout(() => {
+                    window.triggerMusicPlay();
+                }, 200);
             } else {
                 loginError.classList.add('show');
                 passwordInput.classList.add('shake');
@@ -1293,6 +1301,30 @@
             // 检测是否为移动设备
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+            // 手动播放按钮控制函数
+            function showManualPlayButton() {
+                const btn = document.getElementById('manualPlayBtn');
+                if (btn) {
+                    btn.style.display = 'block';
+                }
+            }
+
+            function hideManualPlayButton() {
+                const btn = document.getElementById('manualPlayBtn');
+                if (btn) {
+                    btn.style.display = 'none';
+                }
+            }
+
+            // 全局播放函数（供按钮和登录表单调用）
+            window.triggerMusicPlay = function() {
+                console.log('触发音乐播放');
+                if (typeof audioManager !== 'undefined') {
+                    audioManager.hasUserInteracted = true;
+                    audioManager.smartPlay();
+                }
+            };
+
             // GitHub Pages 音频优化：针对高延迟网络和移动设备优化
             const audioOptimizer = {
                 audioBlob: null,
@@ -1483,8 +1515,14 @@
                 smartPlay() {
                     if (this.isPlaying) return;
 
-                    // 移动端：如果音频已完全加载到内存，直接播放
-                    if (isMobile && audioOptimizer.isLoaded) {
+                    // 移动端或本地文件：如果音频已完全加载或不需要预加载，直接播放
+                    if ((isMobile || isLocalFile) && audioOptimizer.isLoaded) {
+                        this.doPlay();
+                        return;
+                    }
+
+                    // 本地文件模式：直接播放，不等待缓冲
+                    if (isLocalFile) {
                         this.doPlay();
                         return;
                     }
@@ -1500,20 +1538,40 @@
                 },
 
                 doPlay() {
-                    // 移动端：确保用户已经交互过才能播放
-                    if (isMobile && !this.hasUserInteracted) {
+                    // 移动端（非本地）：确保用户已经交互过才能播放
+                    if (isMobile && !this.hasUserInteracted && !isLocalFile) {
+                        console.log('移动端未交互，跳过播放');
+                        // 本地模式也要显示手动播放按钮
+                        if (isLocalFile) {
+                            showManualPlayButton();
+                        }
                         return;
                     }
 
-                    const playPromise = bgMusic.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                            this.isPlaying = true;
-                            this.fadeIn();
-                        }).catch(error => {
-                            this.isPlaying = false;
-                        });
+                    // 如果已经在播放，不要重复播放
+                    if (this.isPlaying) {
+                        console.log('音频已在播放');
+                        return;
                     }
+
+                    console.log('准备播放音频...');
+                    console.log('  src:', bgMusic.src);
+                    console.log('  readyState:', bgMusic.readyState);
+                    console.log('  hasUserInteracted:', this.hasUserInteracted);
+
+                    // 直接调用 play()
+                    bgMusic.play().then(() => {
+                        console.log('✓ 音频播放成功');
+                        this.isPlaying = true;
+                        this.fadeIn();
+                        hideManualPlayButton();
+                    }).catch(error => {
+                        console.log('✗ 音频播放失败:', error.message);
+                        // 本地模式显示手动播放按钮
+                        if (isLocalFile) {
+                            showManualPlayButton();
+                        }
+                    });
                 },
 
                 waitForBuffer() {
@@ -1556,8 +1614,24 @@
 
                     // 监听音频可以播放事件
                     bgMusic.addEventListener('canplay', () => {
+                        console.log('音频已准备好播放');
                         this.isReady = true;
+                        // 本地文件模式：音频准备好后，如果有用户交互，立即播放
+                        if (isLocalFile && this.hasUserInteracted) {
+                            console.log('本地模式：音频准备好，用户已交互，尝试播放');
+                            setTimeout(() => this.doPlay(), 100);
+                        }
                     }, { once: true });
+
+                    // 监听音频元数据加载完成（知道音频时长等信息）
+                    bgMusic.addEventListener('loadedmetadata', () => {
+                        console.log('音频元数据加载完成，时长:', bgMusic.duration, '秒');
+                    });
+
+                    // 监听音频加载错误
+                    bgMusic.addEventListener('error', (e) => {
+                        console.log('音频加载错误:', bgMusic.error);
+                    });
 
                     // 监听音频数据加载进度
                     bgMusic.addEventListener('progress', () => {
@@ -1594,22 +1668,51 @@
                 }
             };
 
-            // 先预加载音频，再初始化播放器
-            audioOptimizer.preloadAudio().then(() => {
+            // 检测是否为本地文件
+            const isLocalFile = window.location.protocol === 'file:';
+            console.log('协议:', window.location.protocol, '| 本地文件:', isLocalFile, '| 移动端:', isMobile);
+
+            if (isLocalFile) {
+                // 本地打开：直接使用 audio 标签播放
+                console.log('本地模式');
+                // 显式设置 src，确保浏览器能找到音频文件
+                bgMusic.src = 'a-little-love.mp3';
+                bgMusic.load();
+                console.log('已设置音频 src:', bgMusic.src);
                 audioManager.init();
-            });
+            } else {
+                // 在线部署：使用 fetch 预加载音频到内存
+                console.log('在线模式');
+                audioOptimizer.preloadAudio().then(() => {
+                    audioManager.init();
+                }).catch(() => {
+                    audioManager.init();
+                });
+
+                // 桌面端：页面加载后也自动开始预加载
+                if (!isMobile) {
+                    setTimeout(() => {
+                        if (!audioOptimizer.isLoaded && !audioOptimizer.isLoading) {
+                            audioOptimizer.preloadAudio();
+                        }
+                    }, 1000);
+                }
+            }
 
             // 用户首次交互时尝试播放
             const initPlayOnInteract = () => {
-                // 标记用户已交互（移动端需要）
+                console.log('用户交互');
                 audioManager.hasUserInteracted = true;
 
-                // 如果还没加载完，先加载
-                if (!audioOptimizer.isLoaded && !audioOptimizer.isLoading) {
+                // 如果是在线部署且还没加载完，先加载
+                if (!isLocalFile && !audioOptimizer.isLoaded && !audioOptimizer.isLoading) {
+                    console.log('开始预加载');
                     audioOptimizer.preloadAudio().then(() => {
+                        console.log('预加载完成');
                         audioManager.smartPlay();
                     });
                 } else {
+                    console.log('直接播放');
                     audioManager.smartPlay();
                 }
 
@@ -1618,9 +1721,12 @@
                 });
             };
 
-            ['click', 'touchstart', 'keydown'].forEach(evt => {
-                document.addEventListener(evt, initPlayOnInteract, { once: true, capture: true, passive: true });
-            });
+            // 在 window 和 document 上都添加监听器，确保捕获所有点击
+            window.addEventListener('click', initPlayOnInteract, { once: true, capture: true });
+            window.addEventListener('touchstart', initPlayOnInteract, { once: true, capture: true });
+
+            document.addEventListener('click', initPlayOnInteract, { once: true, capture: true });
+            document.addEventListener('touchstart', initPlayOnInteract, { once: true, capture: true });
 
             // 移动端：页面加载完成后自动开始预加载音频
             if (isMobile) {
