@@ -128,6 +128,16 @@
             </div>
         </section>
 
+        <!-- 距离破壳日天数显示 -->
+        <div class="birthday-countdown" id="birthdayCountdown">
+            <div class="countdown-content">
+                <span class="countdown-icon">🎂</span>
+                <span class="countdown-text">距离破壳日已经</span>
+                <span class="countdown-days" id="daysSinceBirthday">0</span>
+                <span class="countdown-text">天啦 💕</span>
+            </div>
+        </div>
+
         <header>
             <div class="title-wrapper">
                 <div class="title-decoration"></div>
@@ -263,6 +273,26 @@
 
     <!-- 音频播放按钮（备用方案） -->
     <button id="manualPlayBtn" style="display:none;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:1000;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;padding:12px 24px;border-radius:25px;color:white;font-size:14px;cursor:pointer;box-shadow:0 4px 15px rgba(255,165,0,0.4);opacity:0.9;" onclick="window.triggerMusicPlay()">🎵 点击播放音乐</button>
+
+    <!-- 生日祝福全屏页面 -->
+    <div class="birthday-wish-overlay" id="birthdayWishOverlay">
+        <div class="wish-bg"></div>
+        <div class="wish-bg-mask"></div>
+        <div class="wish-particles" id="wishParticles"></div>
+        <div class="wish-content">
+            <div class="wish-glass-card">
+                <div class="wish-heart">❤</div>
+                <h1 class="wish-title">彭婷婷</h1>
+                <p class="wish-subtitle">生日快乐！！</p>
+                <div class="wish-decoration">
+                    <span class="wish-star">⭐</span>
+                    <span class="wish-star">⭐</span>
+                    <span class="wish-star">⭐</span>
+                </div>
+                <button class="wish-enter-btn" id="wishEnterBtn">🎁 进入回忆</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 音频加载状态指示器 -->
     <div class="audio-loading-indicator" id="audioLoadingIndicator">
@@ -420,6 +450,88 @@
             }
         ];
 
+        // 计算距离破壳日的天数
+        function calculateDaysSinceBirthday() {
+            const birthday = new Date('2001-06-13');
+            const today = new Date();
+            const diffTime = today - birthday;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        // 初始化破壳日天数显示
+        function initBirthdayCountdown() {
+            const daysElement = document.getElementById('daysSinceBirthday');
+            if (daysElement) {
+                const days = calculateDaysSinceBirthday();
+                daysElement.textContent = days;
+            }
+        }
+
+        // 生日祝福页面控制
+        function showBirthdayWish() {
+            const wishOverlay = document.getElementById('birthdayWishOverlay');
+            const particlesContainer = document.getElementById('wishParticles');
+            const enterBtn = document.getElementById('wishEnterBtn');
+
+            if (!wishOverlay) return;
+
+            // 创建飘落粒子
+            createWishParticles(particlesContainer);
+
+            // 显示祝福页面
+            wishOverlay.classList.add('active');
+
+            // 5秒后自动进入照片墙
+            let countdown = 5;
+            const countdownEl = document.createElement('div');
+            countdownEl.className = 'wish-countdown';
+            countdownEl.innerHTML = `<span>${countdown}</span> 秒后自动进入...`;
+            wishOverlay.appendChild(countdownEl);
+
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    countdownEl.innerHTML = `<span>${countdown}</span> 秒后自动进入...`;
+                } else {
+                    clearInterval(countdownInterval);
+                    enterPhotoWall(wishOverlay);
+                }
+            }, 1000);
+
+            // 点击按钮立即进入
+            enterBtn.addEventListener('click', () => {
+                clearInterval(countdownInterval);
+                enterPhotoWall(wishOverlay);
+            });
+        }
+
+        // 创建祝福页面的粒子效果
+        function createWishParticles(container) {
+            if (!container) return;
+            container.innerHTML = '';
+
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'wish-particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.width = (Math.random() * 8 + 5) + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.animationDelay = Math.random() * 4 + 's';
+                particle.style.animationDuration = (Math.random() * 2 + 3) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // 进入照片墙
+        function enterPhotoWall(wishOverlay) {
+            wishOverlay.classList.add('hiding');
+            setTimeout(() => {
+                wishOverlay.classList.remove('active', 'hiding');
+            }, 1000);
+        }
+
         function checkAuth() {
             return sessionStorage.getItem(AUTH_SESSION_KEY) === "true";
         }
@@ -454,14 +566,20 @@
             if (passwordInput.value === ACCESS_PASSWORD) {
                 setAuth();
                 hideLogin();
-                initSidebar();
-                renderPhotoWall();
                 passwordInput.value = '';
 
-                // 登录成功后，延迟一点触发音乐播放（登录本身就是用户交互）
+                // 显示生日祝福页面
+                showBirthdayWish();
+
+                // 祝福页面显示后再初始化照片墙
                 setTimeout(() => {
-                    window.triggerMusicPlay();
-                }, 200);
+                    initSidebar();
+                    renderPhotoWall();
+                    // 照片墙初始化后触发音乐播放
+                    setTimeout(() => {
+                        window.triggerMusicPlay();
+                    }, 500);
+                }, 500);
             } else {
                 loginError.classList.add('show');
                 passwordInput.classList.add('shake');
@@ -1256,6 +1374,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // 初始化破壳日天数显示
+            initBirthdayCountdown();
+
             const pageLoader = document.getElementById('pageLoader');
             const loaderProgressBar = document.getElementById('loaderProgressBar');
             let loadProgress = 0;
